@@ -21,7 +21,7 @@
   try {
     await microsoftTeams.app.initialize();
     const ctx = await microsoftTeams.app.getContext();
-    payload.objectId = ctx.user?.aadObjectId || '';
+    payload.objectId = ctx.user?.id || '';
 
     await fetch(triggerUrl, {
       method: 'POST',
