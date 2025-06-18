@@ -10,7 +10,7 @@
 (async () => {
   const qs = new URLSearchParams(location.search);
   const payload = {
-    objectId: undefined,
+    objectId: '',
     itemId: qs.get('itemId'),
     listId: qs.get('listId'),
     siteId: qs.get('siteId'),
@@ -21,7 +21,7 @@
   try {
     await microsoftTeams.app.initialize();
     const ctx = await microsoftTeams.app.getContext();
-    payload.objectId = ctx.user?.aadObjectId;
+    payload.objectId = ctx.user?.aadObjectId || '';
 
     await fetch(triggerUrl, {
       method: 'POST',
