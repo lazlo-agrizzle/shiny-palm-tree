@@ -16,11 +16,13 @@
     siteId: qs.get('siteId'),
     siteAddress: qs.get('siteAddress')
   };
-  const triggerUrl = qs.get('triggerUrl');
+  const triggerUrl = decodeURIComponent(qs.get('triggerUrl') || '');
+
   try {
     await microsoftTeams.app.initialize();
     const ctx = await microsoftTeams.app.getContext();
     payload.objectId = ctx.user?.aadObjectId;
+
     await fetch(triggerUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
