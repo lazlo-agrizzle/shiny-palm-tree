@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Approve</title>
+  <script src="https://res.cdn.office.net/teams-js/2.12.1/js/MicrosoftTeams.min.js"></script>
+</head>
+<body>
+<script>
+(async () => {
+  const url = new URL(window.location.href);
+  const itemId      = url.searchParams.get('itemId');
+  const listId      = url.searchParams.get('listId');
+  const siteId      = url.searchParams.get('siteId');
+  const siteAddress = url.searchParams.get('siteAddress');
+  const triggerUrl  = url.searchParams.get('triggerUrl');
+
+  await microsoftTeams.app.initialize();
+  const ctx = await microsoftTeams.app.getContext();
+
+  await fetch(triggerUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      objectId: ctx.user?.aadObjectId,
+      itemId,
+      listId,
+      siteId,
+      siteAddress
+    })
+  });
+
+  if (microsoftTeams.dialog?.submit) {
+    microsoftTeams.dialog.submit();
+  } else {
+    microsoftTeams.tasks.submitTask();
+  }
+})();
+</script>
+</body>
+</html>
