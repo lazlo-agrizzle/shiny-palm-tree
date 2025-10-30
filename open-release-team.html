@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Opening Release Team…</title>
+  <script src="https://res.cdn.office.net/teams-js/v2.0.0/js/MicrosoftTeams.min.js"></script>
+  <meta http-equiv="refresh" content="5;url=https://teams.microsoft.com/l/team/19%3AQSPDNsElb4kexoLD9bMmd83UpfwK3hkwxwSsKUmfeNA1%40thread.tacv2/conversations?groupId=9b80b1e2-1228-44ac-bcdb-ba124bf6aa8d&tenantId=94b57fe7-df77-4886-8a5b-3a793f35c349" />
+  <style>body{font-family:Segoe UI,Arial,sans-serif;margin:2rem}</style>
+</head>
+<body>
+  <h2>Opening Release Team…</h2>
+  <p>If nothing happens, <a id="fallback" href="https://teams.microsoft.com/l/team/19%3AQSPDNsElb4kexoLD9bMmd83UpfwK3hkwxwSsKUmfeNA1%40thread.tacv2/conversations?groupId=9b80b1e2-1228-44ac-bcdb-ba124bf6aa8d&tenantId=94b57fe7-df77-4886-8a5b-3a793f35c349">click here</a>.</p>
+  <script>
+    const url = "https://teams.microsoft.com/l/team/19%3AQSPDNsElb4kexoLD9bMmd83UpfwK3hkwxwSsKUmfeNA1%40thread.tacv2/conversations?groupId=9b80b1e2-1228-44ac-bcdb-ba124bf6aa8d&tenantId=94b57fe7-df77-4886-8a5b-3a793f35c349";
+    if (window.microsoftTeams) {
+      microsoftTeams.app.initialize().then(() => {
+        // Executes the deep link inside Teams
+        microsoftTeams.pages.navigateToApp({ url }).catch(() => {
+          microsoftTeams.executeDeepLink
+            ? microsoftTeams.executeDeepLink(url)
+            : (window.location.href = url);
+        });
+      });
+    } else {
+      // Browser fallback (e.g., web client)
+      window.location.href = url;
+    }
+  </script>
+</body>
+</html>
