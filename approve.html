@@ -3,41 +3,40 @@
 <head>
   <meta charset="utf-8">
   <title>Approve</title>
-
-  <!-- 1) Load Teams JS SDK (required!) -->
-  <script src="https://res.cdn.office.net/teams-js/2.45.0/js/MicrosoftTeams.min.js"></script>
+  <script src="https://res.cdn.office.net/teams-js/2.0.0/js/MicrosoftTeams.min.js"></script>
 </head>
 <body>
 <script>
   (async () => {
-    // 2) Bail out gracefully if somehow not in Teams (useful for direct browser hits)
-    if (!window.microsoftTeams) {
-      console.error("microsoftTeams SDK not available");
-      return;
-    }
-
     const qs = new URLSearchParams(location.search);
     const payload = {
-      objectId: "",
-      // we only send these; missing ones just become null/empty
-      itemId: qs.get("itemId") || qs.get("itemld"),
-      listId: qs.get("listId") || qs.get("listld"),
-      siteId: qs.get("siteId") || qs.get("siteld"),
-      siteAddress: qs.get("siteAddress") || ""
+      objectId: '',
+      itemId: qs.get('itemId') || qs.get('itemld'),
+      listId: qs.get('listId') || qs.get('listld'),
+      siteId: qs.get('siteId') || qs.get('siteld'),
+      siteAddress: qs.get('siteAddress') || ''
     };
-    const triggerUrl = decodeURIComponent(qs.get("triggerUrl") || "");
+    const triggerUrl = decodeURIComponent(qs.get('triggerUrl') || '');
+
+    // Allow direct browser hits to no-op instead of crash
+    if (!window.microsoftTeams) {
+      console.log("Not running inside Teams; skipping teams-specific calls.");
+      if (triggerUrl) {
+        fetch(triggerUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).catch(console.error);
+      }
+      return;
+    }
 
     try {
       await microsoftTeams.app.initialize();
       const ctx = await microsoftTeams.app.getContext();
-      payload.objectId = (ctx.user && ctx.user.id) || "";
+      payload.objectId = ctx.user?.id || '';
 
-      // 3) If showLoadingIndicator = true in manifest, tell Teams we're good
-      if (microsoftTeams.app.notifySuccess) {
-        microsoftTeams.app.notifySuccess();
-      }
-
-      // 4) Fire-and-forget the flow trigger so the dialog can close quickly
+      // fire-and-forget: don't await so the dialog can close immediately
       if (triggerUrl) {
         fetch(triggerUrl, {
           method: "POST",
@@ -47,13 +46,12 @@
       }
     } catch (e) {
       console.error(e);
-      // optional: microsoftTeams.app.notifyFailure && microsoftTeams.app.notifyFailure({ ... })
     } finally {
-      // 5) Close the dialog / task module
       try {
-        if (microsoftTeams.dialog && microsoftTeams.dialog.submit) {
+        // Close the task module / dialog
+        if (microsoftTeams.dialog?.submit) {
           microsoftTeams.dialog.submit();
-        } else if (microsoftTeams.tasks && microsoftTeams.tasks.submitTask) {
+        } else if (microsoftTeams.tasks?.submitTask) {
           microsoftTeams.tasks.submitTask();
         }
       } catch (e) {
