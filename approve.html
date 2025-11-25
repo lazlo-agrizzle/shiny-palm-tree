@@ -1,35 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Approve</title>
+
+  <!-- 1) Load Teams JS SDK (required!) -->
+  <script src="https://res.cdn.office.net/teams-js/2.0.0/js/MicrosoftTeams.min.js"></script>
+</head>
+<body>
 <script>
-(async () => {
-  const qs = new URLSearchParams(location.search);
-  const payload = {
-    objectId: '',
-    itemId: qs.get('itemId'),
-    listId: qs.get('listId'),
-    siteId: qs.get('siteId'),
-    siteAddress: qs.get('siteAddress')
-  };
-  const triggerUrl = decodeURIComponent(qs.get('triggerUrl') || '');
-
-  try {
-    await microsoftTeams.app.initialize();
-    const ctx = await microsoftTeams.app.getContext();
-    payload.objectId = ctx.user?.id || '';
-
-    // tell Teams the dialog loaded OK (for showLoadingIndicator=true)
-    microsoftTeams.app.notifySuccess();
-
-    if (triggerUrl) {
-      await fetch(triggerUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+  (async () => {
+    // 2) Bail out gracefully if somehow not in Teams (useful for direct browser hits)
+    if (!window.microsoftTeams) {
+      console.error("microsoftTeams SDK not available");
+      return;
     }
-  } catch (e) {
-    console.error(e);
-    // optional: microsoftTeams.app.notifyFailure(...)
-  } finally {
-    (microsoftTeams.dialog?.submit || microsoftTeams.tasks.submitTask)();
-  }
-})();
+
+    const qs = new URLSearchParams(location.search);
+    const payload = {
+      objectId: "",
+      // we only send these; missing ones just become null/empty
+      itemId: qs.get("itemId") || qs.get("itemld"),
+      listId: qs.get("listId") || qs.get("listld"),
+      siteId: qs.get("siteId") || qs.get("siteld"),
+      siteAddress: qs.get("siteAddress") || ""
+    };
+    const triggerUrl = decodeURIComponent(qs.get("triggerUrl") || "");
+
+    try {
+      await microsoftTeams.app.initialize();
+      const ctx = await microsoftTeams.app.getContext();
+      payload.objectId = (ctx.user && ctx.user.id) || "";
+
+      // 3) If showLoadingIndicator = true in manifest, tell Teams we're good
+      if (microsoftTeams.app.notifySuccess) {
+        microsoftTeams.app.notifySuccess();
+      }
+
+      // 4) Fire-and-forget the flow trigger so the dialog can close quickly
+      if (triggerUrl) {
+        fetch(triggerUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).catch(console.error);
+      }
+    } catch (e) {
+      console.error(e);
+      // optional: microsoftTeams.app.notifyFailure && microsoftTeams.app.notifyFailure({ ... })
+    } finally {
+      // 5) Close the dialog / task module
+      try {
+        if (microsoftTeams.dialog && microsoftTeams.dialog.submit) {
+          microsoftTeams.dialog.submit();
+        } else if (microsoftTeams.tasks && microsoftTeams.tasks.submitTask) {
+          microsoftTeams.tasks.submitTask();
+        }
+      } catch (e) {
+        console.error("Failed to close dialog", e);
+      }
+    }
+  })();
 </script>
+</body>
+</html>
