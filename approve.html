@@ -1,64 +1,39 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Approve</title>
-  <script src="https://res.cdn.office.net/teams-js/2.0.0/js/MicrosoftTeams.min.js"></script>
+<meta charset="utf-8">
+<title>Approve</title>
+<script src="https://res.cdn.office.net/teams-js/2.0.0/js/MicrosoftTeams.min.js"></script>
 </head>
 <body>
 <script>
-  (async () => {
-    const qs = new URLSearchParams(location.search);
-    const payload = {
-      objectId: '',
-      itemId: qs.get('itemId') || qs.get('itemld'),
-      listId: qs.get('listId') || qs.get('listld'),
-      siteId: qs.get('siteId') || qs.get('siteld'),
-      siteAddress: qs.get('siteAddress') || ''
-    };
-    const triggerUrl = decodeURIComponent(qs.get('triggerUrl') || '');
+(async () => {
+  const qs = new URLSearchParams(location.search);
+  const payload = {
+    objectId: '',
+    itemId: qs.get('itemId'),
+    listId: qs.get('listId'),
+    siteId: qs.get('siteId'),
+    siteAddress: qs.get('siteAddress')
+  };
+  const triggerUrl = decodeURIComponent(qs.get('triggerUrl') || '');
 
-    // Allow direct browser hits to no-op instead of crash
-    if (!window.microsoftTeams) {
-      console.log("Not running inside Teams; skipping teams-specific calls.");
-      if (triggerUrl) {
-        fetch(triggerUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        }).catch(console.error);
-      }
-      return;
-    }
+  try {
+    await microsoftTeams.app.initialize();
+    const ctx = await microsoftTeams.app.getContext();
+    payload.objectId = ctx.user?.id || '';
 
-    try {
-      await microsoftTeams.app.initialize();
-      const ctx = await microsoftTeams.app.getContext();
-      payload.objectId = ctx.user?.id || '';
-
-      // fire-and-forget: don't await so the dialog can close immediately
-      if (triggerUrl) {
-        fetch(triggerUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        }).catch(console.error);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      try {
-        // Close the task module / dialog
-        if (microsoftTeams.dialog?.submit) {
-          microsoftTeams.dialog.submit();
-        } else if (microsoftTeams.tasks?.submitTask) {
-          microsoftTeams.tasks.submitTask();
-        }
-      } catch (e) {
-        console.error("Failed to close dialog", e);
-      }
-    }
-  })();
+    await fetch(triggerUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (e) {
+    console.error(e);
+  } finally {
+    (microsoftTeams.dialog?.submit || microsoftTeams.tasks.submitTask)();
+  }
+})();
 </script>
 </body>
 </html>
