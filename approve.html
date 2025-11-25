@@ -1,11 +1,3 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Approve</title>
-<script src="https://res.cdn.office.net/teams-js/2.0.0/js/MicrosoftTeams.min.js"></script>
-</head>
-<body>
 <script>
 (async () => {
   const qs = new URLSearchParams(location.search);
@@ -23,17 +15,21 @@
     const ctx = await microsoftTeams.app.getContext();
     payload.objectId = ctx.user?.id || '';
 
-    await fetch(triggerUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    // tell Teams the dialog loaded OK (for showLoadingIndicator=true)
+    microsoftTeams.app.notifySuccess();
+
+    if (triggerUrl) {
+      await fetch(triggerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
   } catch (e) {
     console.error(e);
+    // optional: microsoftTeams.app.notifyFailure(...)
   } finally {
     (microsoftTeams.dialog?.submit || microsoftTeams.tasks.submitTask)();
   }
 })();
 </script>
-</body>
-</html>
