@@ -1,39 +1,50 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Approve</title>
-<script src="https://res.cdn.office.net/teams-js/2.0.0/js/MicrosoftTeams.min.js"></script>
-</head>
-<body>
 <script>
 (async () => {
-  const qs = new URLSearchParams(location.search);
-  const payload = {
-    objectId: '',
-    itemId: qs.get('itemId'),
-    listId: qs.get('listId'),
-    siteId: qs.get('siteId'),
-    siteAddress: qs.get('siteAddress')
+  const show = (msg) => {
+    document.body.innerHTML = `<pre style="white-space:pre-wrap;font:14px sans-serif">${msg}</pre>`;
   };
-  const triggerUrl = decodeURIComponent(qs.get('triggerUrl') || '');
 
   try {
+    show("Initializing Teams...");
     await microsoftTeams.app.initialize();
-    const ctx = await microsoftTeams.app.getContext();
-    payload.objectId = ctx.user?.id || '';
 
-    await fetch(triggerUrl, {
+    show("Getting context...");
+    const ctx = await microsoftTeams.app.getContext();
+
+    const qs = new URLSearchParams(location.search);
+    const triggerUrl = decodeURIComponent(qs.get('triggerUrl') || '');
+
+    const payload = {
+      objectId: ctx.user?.id || '',
+      itemId: qs.get('itemId'),
+      listId: qs.get('listId'),
+      siteId: qs.get('siteId'),
+      siteAddress: qs.get('siteAddress')
+    };
+
+    show("Calling flow...");
+    const resp = await fetch(triggerUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+
+    const text = await resp.text();
+    show(`HTTP ${resp.status}\n\n${text}`);
+
+    if (!resp.ok) {
+      throw new Error(`HTTP ${resp.status}`);
+    }
+
+    setTimeout(() => {
+      if (microsoftTeams.dialog?.submit) {
+        microsoftTeams.dialog.submit();
+      } else {
+        microsoftTeams.tasks.submitTask();
+      }
+    }, 1500);
   } catch (e) {
-    console.error(e);
-  } finally {
-    (microsoftTeams.dialog?.submit || microsoftTeams.tasks.submitTask)();
+    show(`FAILED:\n${e?.message || e}`);
   }
 })();
 </script>
-</body>
-</html>
