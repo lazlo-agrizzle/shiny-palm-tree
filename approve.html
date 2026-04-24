@@ -3,12 +3,36 @@
 <head>
 <meta charset="utf-8">
 <title>Approve</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://res.cdn.office.net/teams-js/2.0.0/js/MicrosoftTeams.min.js"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 12px; font-size: 14px; }
+  #log { white-space: pre-wrap; word-break: break-word; }
+  .ok { color: #0a7a0a; }
+  .err { color: #b00020; }
+</style>
 </head>
 <body>
+<div id="log">Starting…</div>
+
 <script>
 (async () => {
   const qs = new URLSearchParams(location.search);
+  const DEBUG = qs.get('debug') === '1';
+  const logEl = document.getElementById('log');
+
+  const lines = [];
+  function log(msg, isError = false) {
+    const line = `[${new Date().toISOString()}] ${msg}`;
+    lines.push(line);
+    console[isError ? 'error' : 'log'](line);
+    if (DEBUG || isError) {
+      logEl.innerHTML =
+        lines.map(x => x.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))).join('\n');
+      logEl.className = isError ? 'err' : 'ok';
+    }
+  }
+
   const payload = {
     objectId: '',
     itemId: qs.get('itemId'),
@@ -16,22 +40,68 @@
     siteId: qs.get('siteId'),
     siteAddress: qs.get('siteAddress')
   };
-  const triggerUrl = decodeURIComponent(qs.get('triggerUrl') || '');
+  const triggerUrlRaw = qs.get('triggerUrl') || '';
+  const triggerUrl = decodeURIComponent(triggerUrlRaw);
+
+  log(`QS itemId=${payload.itemId || '(missing)'}`);
+  log(`QS listId=${payload.listId || '(missing)'}`);
+  log(`QS siteId=${payload.siteId || '(missing)'}`);
+  log(`QS siteAddress=${payload.siteAddress || '(missing)'}`);
+  log(`QS triggerUrl present=${triggerUrl ? 'yes' : 'no'}`);
+  log(`Location origin=${location.origin}`);
+  log(`User agent=${navigator.userAgent}`);
 
   try {
+    log('Before microsoftTeams.app.initialize()');
     await microsoftTeams.app.initialize();
-    const ctx = await microsoftTeams.app.getContext();
-    payload.objectId = ctx.user?.id || '';
+    log('After microsoftTeams.app.initialize()');
 
-    await fetch(triggerUrl, {
+    log('Before microsoftTeams.app.getContext()');
+    const ctx = await microsoftTeams.app.getContext();
+    log('After microsoftTeams.app.getContext()');
+
+    payload.objectId = ctx.user?.id || '';
+    log(`Context user.id present=${payload.objectId ? 'yes' : 'no'}`);
+    log(`Host clientType=${ctx.app?.host?.clientType || '(unknown)'}`);
+    log(`Page frameContext=${ctx.page?.frameContext || '(unknown)'}`);
+
+    log('Before fetch()');
+    const response = await fetch(triggerUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+
+    log(`After fetch(): status=${response.status} ok=${response.ok}`);
+
+    let responseText = '';
+    try {
+      responseText = await response.text();
+      log(`Response body preview=${responseText.slice(0, 500) || '(empty)'}`);
+    } catch (readErr) {
+      log(`Could not read response body: ${readErr?.message || readErr}`, true);
+    }
+
+    log('About to close dialog with current submitTask path');
+
+    if (DEBUG) {
+      log('DEBUG mode enabled: waiting 3 seconds before closing');
+      await new Promise(r => setTimeout(r, 3000));
+    }
   } catch (e) {
-    console.error(e);
-  } finally {
+    log(`Caught error: ${e?.message || e}`, true);
+    log(`Error object: ${JSON.stringify({
+      message: e?.message,
+      name: e?.name,
+      stack: e?.stack
+    }, null, 2)}`, true);
+    return; // keep dialog open on error
+  }
+
+  try {
     (microsoftTeams.dialog?.submit || microsoftTeams.tasks.submitTask)();
+  } catch (closeErr) {
+    log(`Close failed: ${closeErr?.message || closeErr}`, true);
   }
 })();
 </script>
