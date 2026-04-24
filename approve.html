@@ -13,31 +13,23 @@
 </style>
 </head>
 
-<body style="background:#fff3cd; font-family: sans-serif; padding:16px;">
-<div style="font-size:20px; font-weight:700;">
-  MOBILE TEST BUILD 2026-04-24 14:55
-</div>
-<div>If you can read this, the new HTML file loaded.</div>
-
-<div id="log">Starting…</div>
+<body style="background:#fff3cd; font-family:sans-serif; padding:16px;">
+  <div><strong>MOBILE TEST BUILD 2026-04-24 15:10</strong></div>
+  <pre id="log" style="white-space:pre-wrap; margin-top:12px;"></pre>
 
 <script>
 (async () => {
   const qs = new URLSearchParams(location.search);
-  const DEBUG = qs.get('debug') === '1';
+  const HOLD_OPEN = qs.get('holdOpen') === '1';
   const logEl = document.getElementById('log');
 
-  const lines = [];
-  function log(msg, isError = false) {
-    const line = `[${new Date().toISOString()}] ${msg}`;
-    lines.push(line);
-    console[isError ? 'error' : 'log'](line);
-    if (DEBUG || isError) {
-      logEl.innerHTML =
-        lines.map(x => x.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))).join('\n');
-      logEl.className = isError ? 'err' : 'ok';
-    }
+  function log(msg) {
+    console.log(msg);
+    logEl.textContent += msg + '\n';
   }
+
+  log('Page loaded');
+  log('holdOpen=' + HOLD_OPEN);
 
   const payload = {
     objectId: '',
@@ -46,70 +38,43 @@
     siteId: qs.get('siteId'),
     siteAddress: qs.get('siteAddress')
   };
-  const triggerUrlRaw = qs.get('triggerUrl') || '';
-  const triggerUrl = decodeURIComponent(triggerUrlRaw);
-
-  log(`QS itemId=${payload.itemId || '(missing)'}`);
-  log(`QS listId=${payload.listId || '(missing)'}`);
-  log(`QS siteId=${payload.siteId || '(missing)'}`);
-  log(`QS siteAddress=${payload.siteAddress || '(missing)'}`);
-  log(`QS triggerUrl present=${triggerUrl ? 'yes' : 'no'}`);
-  log(`Location origin=${location.origin}`);
-  log(`User agent=${navigator.userAgent}`);
+  const triggerUrl = decodeURIComponent(qs.get('triggerUrl') || '');
 
   try {
-    log('Before microsoftTeams.app.initialize()');
+    log('Before initialize');
     await microsoftTeams.app.initialize();
-    log('After microsoftTeams.app.initialize()');
+    log('After initialize');
 
-    log('Before microsoftTeams.app.getContext()');
     const ctx = await microsoftTeams.app.getContext();
-    log('After microsoftTeams.app.getContext()');
+    log('After getContext');
 
     payload.objectId = ctx.user?.id || '';
-    log(`Context user.id present=${payload.objectId ? 'yes' : 'no'}`);
-    log(`Host clientType=${ctx.app?.host?.clientType || '(unknown)'}`);
-    log(`Page frameContext=${ctx.page?.frameContext || '(unknown)'}`);
+    log('objectId present=' + (!!payload.objectId));
 
-    log('Before fetch()');
+    if (HOLD_OPEN) {
+      log('HOLD OPEN active - stopping before fetch/close');
+      return;
+    }
+
+    log('Before fetch');
     const response = await fetch(triggerUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-
-    log(`After fetch(): status=${response.status} ok=${response.ok}`);
-
-    let responseText = '';
-    try {
-      responseText = await response.text();
-      log(`Response body preview=${responseText.slice(0, 500) || '(empty)'}`);
-    } catch (readErr) {
-      log(`Could not read response body: ${readErr?.message || readErr}`, true);
-    }
-
-    log('About to close dialog with current submitTask path');
-
-    if (DEBUG) {
-      log('DEBUG mode enabled: waiting 3 seconds before closing');
-      await new Promise(r => setTimeout(r, 3000));
-    }
+    log(`After fetch status=${response.status} ok=${response.ok}`);
   } catch (e) {
-    log(`Caught error: ${e?.message || e}`, true);
-    log(`Error object: ${JSON.stringify({
-      message: e?.message,
-      name: e?.name,
-      stack: e?.stack
-    }, null, 2)}`, true);
-    return; // keep dialog open on error
+    log('ERROR: ' + (e?.message || e));
+    return;
   }
 
-  try {
-    (microsoftTeams.dialog?.submit || microsoftTeams.tasks.submitTask)();
-  } catch (closeErr) {
-    log(`Close failed: ${closeErr?.message || closeErr}`, true);
+  if (HOLD_OPEN) {
+    log('HOLD OPEN active - not closing dialog');
+    return;
   }
+
+  log('Closing dialog');
+  (microsoftTeams.dialog?.submit || microsoftTeams.tasks.submitTask)();
 })();
 </script>
 </body>
-</html>
