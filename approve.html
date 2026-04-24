@@ -31,7 +31,7 @@
   } catch (e) {
     console.error(e);
   } finally {
-    microsoftTeams.dialog.url.submit({ ok: true });
+    (microsoftTeams.dialog?.submit || microsoftTeams.tasks.submitTask)();
   }
 })();
 </script>
